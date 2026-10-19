@@ -60,13 +60,9 @@ return {s: s, pin: document.getElementById('v2-pin' + (i + 1)), note: document.g
 });
 
 var zoomK = 1.15;
-var lastPortrait = null;
 function place() {
 var r = stage.getBoundingClientRect();
 var W = r.width, H = r.height;
-/* На портрете кадр целиком (meet), поля закрывает размытый фон из CSS. */
-var portrait = W < H;
-if (portrait !== lastPortrait) { svg.setAttribute('preserveAspectRatio', portrait ? 'xMidYMid meet' : 'xMidYMid slice'); lastPortrait = portrait; }
 hl.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
 var m = world.getScreenCTM();
 spots.forEach(function (o) {
@@ -101,6 +97,12 @@ t = t * t * (3 - 2 * t);
 var s = 1 + ((a.s + (b.s - a.s) * t) - 1) * zoomK;
 var cx = a.cx + (b.cx - a.cx) * t;
 var cy = a.cy + (b.cy - a.cy) * t;
+/* На портрете кадр всегда виден по высоте целиком (без зума и вертикального сдвига), режется только ширина по сторонам. */
+var W = stage.clientWidth, H = stage.clientHeight;
+if (W < H) {
+var half = 450 * W / H;
+return {s: 1, cx: clamp(cx, half, 1600 - half), cy: 450};
+}
 var hw = 800 / s, hh = 450 / s;
 return {s: s, cx: clamp(cx, hw, 1600 - hw), cy: clamp(cy, hh, 900 - hh)};
 }
