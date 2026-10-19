@@ -42,6 +42,18 @@ function fmt(n) { return n.toLocaleString('ru-RU'); }
 
 var hero = document.querySelector('.v2-hero');
 var stage = document.getElementById('v2-stage');
+/* Высота сцены фиксируется по видимой высоте экрана. На телефоне адресная строка прячется при скролле, и пересчёт от неё сбивал бы прогресс. Пересчёт только при смене ширины или большом изменении высоты (поворот, ресайз окна). */
+var sizedW = 0, sizedH = 0;
+function sizeHero() {
+var w = document.documentElement.clientWidth, h = window.innerHeight;
+if (w === sizedW && Math.abs(h - sizedH) < 160) return;
+sizedW = w; sizedH = h;
+document.documentElement.style.setProperty('--v2-h', h + 'px');
+}
+sizeHero();
+window.addEventListener('resize', sizeHero);
+function resizeAtLoad() { sizedW = 0; sizeHero(); }
+if (document.readyState === 'complete') resizeAtLoad(); else window.addEventListener('load', resizeAtLoad);
 var world = document.getElementById('v2-world');
 var hl = document.getElementById('v2-hl');
 var intro = document.getElementById('v2-intro');
@@ -99,7 +111,7 @@ o.vis = px > 16 && px < W - 16 && py > 16 && py < H - 16;
 
 function progress() {
 var rr = hero.getBoundingClientRect();
-var total = hero.offsetHeight - window.innerHeight;
+var total = hero.offsetHeight - stage.offsetHeight;
 return clamp(-rr.top / total, 0, 1);
 }
 
