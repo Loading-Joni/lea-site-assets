@@ -73,18 +73,29 @@ var r = stage.getBoundingClientRect();
 var W = r.width, H = r.height;
 hl.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
 var m = world.getScreenCTM();
+/* На портрете кадр 16:9 стоит полосой по центру: карточки выносятся в один слот под полосой, точки остаются на деталях. */
+var bandBottom = (H + W * 9 / 16) / 2;
 spots.forEach(function (o) {
 var pt = svg.createSVGPoint(); pt.x = o.s.ax; pt.y = o.s.ay;
 var q = pt.matrixTransform(m);
 var px = q.x - r.left, py = q.y - r.top;
-var nx = o.s.bx / 100 * W + (tw.pos[o.key] || [0, 0])[0], ny = o.s.by / 100 * H + (tw.pos[o.key] || [0, 0])[1];
 var nw = o.note.offsetWidth, nh = o.note.offsetHeight;
+var nx, ny, ex, ey;
+if (fitPortrait) {
+nx = (W - nw) / 2;
+ny = bandBottom + 16;
 nx = clamp(nx, 12, Math.max(12, W - nw - 12)); ny = clamp(ny, 12, Math.max(12, H - nh - 12));
+ex = clamp(px, nx + 8, nx + nw - 8); ey = ny;
+} else {
+var off = tw.pos[o.key] || [0, 0];
+nx = clamp(o.s.bx / 100 * W + off[0], 12, Math.max(12, W - nw - 12));
+ny = clamp(o.s.by / 100 * H + off[1], 12, Math.max(12, H - nh - 12));
+ex = nx > px ? nx : nx + nw; ey = ny + 12;
+}
 o.pin.style.left = px + 'px'; o.pin.style.top = py + 'px';
 o.note.style.left = nx + 'px'; o.note.style.top = ny + 'px';
-var ex = nx > px ? nx : nx + nw;
 o.line.setAttribute('x1', px); o.line.setAttribute('y1', py);
-o.line.setAttribute('x2', ex); o.line.setAttribute('y2', ny + 12);
+o.line.setAttribute('x2', ex); o.line.setAttribute('y2', ey);
 o.vis = px > 16 && px < W - 16 && py > 16 && py < H - 16;
 });
 }
@@ -202,7 +213,7 @@ submit.disabled = true;
 document.getElementById('v2-year').textContent = new Date().getFullYear();
 
 var TW_KEY = 'lea-v2-tw';
-var TW_DEF = {hero:'hero3.jpg', video:true, bright:100, shade:80, zoom:115, fs:100, img:100, gap:100, bg:'graphite', anim:true, font:0, btn:0, pos:{}, color:{}};
+var TW_DEF = {hero:'hero3.jpg', video:true, bright:100, shade:80, zoom:115, fs:100, img:100, gap:100, bg:'graphite', anim:true, font:0, btn:0, pos:{}};
 /* Первый образец — исходная пара шрифтов сайта. --serif для заголовков, --sans для текста. */
 var FONTS = [
 {n:'Журнал', d:'Playfair / Manrope', serif:"'Playfair Display',Georgia,serif", sans:"'Manrope',system-ui,sans-serif"},
@@ -252,7 +263,6 @@ try { saved = JSON.parse(localStorage.getItem(TW_KEY)); } catch (e) { saved = nu
 var fromCfg = saved || window.LEA_TW || {};
 for (var key in fromCfg) tw[key] = fromCfg[key];
 tw.pos = tw.pos || {};
-tw.color = tw.color || {};
 var RANGES = {bright:'tw-bright', shade:'tw-shade', zoom:'tw-zoom', fs:'tw-fs', img:'tw-img', gap:'tw-gap'};
 /* Твики применяются ко всем блокам сразу: twRoot работает как набор всех блоков с data-block. */
 var allRoots = Array.prototype.slice.call(document.querySelectorAll('.v2[data-block]'));
@@ -292,25 +302,6 @@ var p = tw.pos[x.k] || [0, 0];
 el.style.translate = p[0] + 'px ' + p[1] + 'px';
 });
 }
-/* Элемент, которым управляет ключ: текстовый блок или выноска note1–note4. */
-function elFor(k) {
-if (k.indexOf('note') === 0) { var n = spots[+k.slice(4) - 1]; return n ? n.note : null; }
-for (var i = 0; i < TEXTS.length; i++) if (TEXTS[i].k === k) return document.querySelector(TEXTS[i].s);
-return null;
-}
-function applyColor() {
-document.querySelectorAll('[data-tc]').forEach(function (n) { n.removeAttribute('data-tc'); });
-var css = '';
-Object.keys(tw.color).forEach(function (k) {
-var el = elFor(k);
-if (!el) return;
-el.setAttribute('data-tc', k);
-css += '[data-tc="' + k + '"], [data-tc="' + k + '"] * {color:' + tw.color[k] + ' !important}\n';
-});
-var st = document.getElementById('tw-color-style');
-if (!st) { st = document.createElement('style'); st.id = 'tw-color-style'; document.head.appendChild(st); }
-st.textContent = css;
-}
 function toHex(c) {
 var m = String(c).match(/\d+/g);
 if (!m || m.length < 3) return '#ffffff';
@@ -328,7 +319,6 @@ twRoot.classList.toggle('v2-still', !tw.anim);
 etapy.setAttribute('data-bg', tw.bg);
 applyFont();
 applyPos();
-applyColor();
 var bt = BTNS[tw.btn] || BTNS[0];
 twRoot.style.setProperty('--btn-bg', bt.bg);
 twRoot.style.setProperty('--btn-hv', bt.hv);
@@ -391,9 +381,9 @@ posSel.value = posKey;
 dot.style.left = ((p[0] + PAD.x) / (2 * PAD.x) * 100) + '%';
 dot.style.top = ((p[1] + PAD.y) / (2 * PAD.y) * 100) + '%';
 document.getElementById('o-xy').textContent = 'X ' + p[0] + ' · Y ' + p[1] + ' px';
-var colEl = elFor(posKey);
+var colEl = colSel ? (colSel.startContainer.nodeType === 1 ? colSel.startContainer : colSel.startContainer.parentElement) : null;
 var colIn = document.getElementById('tw-color');
-if (colIn) colIn.value = tw.color[posKey] || (colEl ? toHex(getComputedStyle(colEl).color) : '#ffffff');
+if (colIn && colEl) colIn.value = toHex(getComputedStyle(colEl).color);
 }
 posSel.addEventListener('change', function () { posKey = this.value; syncPos(); });
 function setPos(x, y) {
@@ -410,12 +400,59 @@ pad.addEventListener('pointermove', function (e) { if (pad.hasPointerCapture(e.p
 document.getElementById('tw-pos-reset').addEventListener('click', function () {
 delete tw.pos[posKey]; save(); syncPos(); applyPos();
 });
+/* Цвет применяется к выделенному в тексте фрагменту (буква, слово, фраза). Выделение запоминается, потому что панель забирает фокус. */
+var colSel = null;
+function editableOf(node) {
+var el = node && (node.nodeType === 1 ? node : node.parentElement);
+return el ? el.closest('[contenteditable=true]') : null;
+}
+document.addEventListener('selectionchange', function () {
+if (!editing) return;
+var s = window.getSelection();
+if (!s || !s.rangeCount || s.isCollapsed || !editableOf(s.anchorNode)) return;
+colSel = s.getRangeAt(0).cloneRange();
+syncPos();
+});
+function restoreColSel() {
+if (!colSel || colSel.collapsed) return null;
+var ed = editableOf(colSel.commonAncestorContainer);
+if (!ed) return null;
+ed.focus();
+var s = window.getSelection();
+s.removeAllRanges();
+s.addRange(colSel.cloneRange());
+return ed;
+}
+function afterColChange(ed) {
+var s = window.getSelection();
+if (s.rangeCount && !s.isCollapsed) colSel = s.getRangeAt(0).cloneRange();
+var block = ed.closest('[data-block]');
+if (block) saveDraft(block.getAttribute('data-block'));
+}
 var colInput = document.getElementById('tw-color'), colReset = document.getElementById('tw-color-reset');
 if (colInput) colInput.addEventListener('input', function () {
-tw.color[posKey] = this.value; save(); applyColor();
+var ed = restoreColSel();
+if (!ed) return;
+document.execCommand('styleWithCSS', false, true);
+document.execCommand('foreColor', false, this.value);
+afterColChange(ed);
 });
+/* Сброс: снимаем цвет со спанов, которые попадают в выделение. */
 if (colReset) colReset.addEventListener('click', function () {
-delete tw.color[posKey]; save(); applyColor(); syncPos();
+var ed = restoreColSel();
+if (!ed) return;
+var range = colSel.cloneRange();
+ed.querySelectorAll('span[style]').forEach(function (sp) {
+if (!range.intersectsNode(sp) || !sp.style.color) return;
+sp.style.removeProperty('color');
+if (!sp.getAttribute('style').trim()) sp.removeAttribute('style');
+if (!sp.attributes.length) {
+var parent = sp.parentNode;
+while (sp.firstChild) parent.insertBefore(sp.firstChild, sp);
+parent.removeChild(sp);
+}
+});
+afterColChange(ed);
 });
 /* Перетаскивание текста прямо на странице, пока открыта панель. Клик по ссылке после сдвига не срабатывает. */
 function keyAt(target) {
@@ -557,7 +594,6 @@ c.classList.remove('v2-novideo', 'v2-still', 'v2-editing', 'v2-txt');
 c.querySelectorAll('.v2-holo, #v2-hl line').forEach(function (n) { n.parentNode.removeChild(n); });
 c.querySelectorAll('.is-in, .is-ready').forEach(function (n) { n.classList.remove('is-in', 'is-ready'); });
 c.querySelectorAll('[contenteditable]').forEach(function (n) { n.removeAttribute('contenteditable'); });
-c.querySelectorAll('[data-tc]').forEach(function (n) { n.removeAttribute('data-tc'); });
 c.querySelectorAll('.v2-pin, .v2-note, #v2-intro, .v2-flame-glow, .v2-flame-hot, .v2-flame-hot i, .v2-flame-hot b').forEach(function (n) { n.removeAttribute('style'); });
 c.querySelectorAll('#v2-world').forEach(function (n) { n.removeAttribute('transform'); });
 c.querySelectorAll('.v2-modal').forEach(function (n) { n.hidden = true; });
