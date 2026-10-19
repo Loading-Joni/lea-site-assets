@@ -115,6 +115,13 @@ var total = hero.offsetHeight - stage.offsetHeight;
 return clamp(-rr.top / total, 0, 1);
 }
 
+/* Закрепление сцены через transform, а не position:sticky: sticky ломается в Tilda и на iOS из-за overflow у предков. */
+function pinStage() {
+var room = hero.offsetHeight - stage.offsetHeight;
+var y = clamp(-hero.getBoundingClientRect().top, 0, room);
+stage.style.transform = 'translate3d(0,' + y + 'px,0)';
+}
+
 /* Камера: между ключевыми кадрами плавный переход, центр не выходит за пределы кадра hero3. */
 var fitPortrait = null;
 function camera(p) {
@@ -174,6 +181,7 @@ o.line.style.opacity = String(pa);
 /* Сглаживание прогресса по времени кадра: не зависит от частоты экрана, убирает рывки от колеса мыши и тачпада. */
 var SMOOTH = 3, smP = 0, lastFrame = 0;
 function render(now) {
+pinStage();
 var target = progress();
 if (!lastFrame) smP = target;
 var dt = lastFrame ? Math.min(.1, (now - lastFrame) / 1000) : 0;
