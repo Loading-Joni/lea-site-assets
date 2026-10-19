@@ -377,7 +377,8 @@ dot.style.left = ((p[0] + PAD.x) / (2 * PAD.x) * 100) + '%';
 dot.style.top = ((p[1] + PAD.y) / (2 * PAD.y) * 100) + '%';
 document.getElementById('o-xy').textContent = 'X ' + p[0] + ' · Y ' + p[1] + ' px';
 var colEl = elFor(posKey);
-document.getElementById('tw-color').value = tw.color[posKey] || (colEl ? toHex(getComputedStyle(colEl).color) : '#ffffff');
+var colIn = document.getElementById('tw-color');
+if (colIn) colIn.value = tw.color[posKey] || (colEl ? toHex(getComputedStyle(colEl).color) : '#ffffff');
 }
 posSel.addEventListener('change', function () { posKey = this.value; syncPos(); });
 function setPos(x, y) {
@@ -394,10 +395,11 @@ pad.addEventListener('pointermove', function (e) { if (pad.hasPointerCapture(e.p
 document.getElementById('tw-pos-reset').addEventListener('click', function () {
 delete tw.pos[posKey]; save(); syncPos(); applyPos();
 });
-document.getElementById('tw-color').addEventListener('input', function () {
+var colInput = document.getElementById('tw-color'), colReset = document.getElementById('tw-color-reset');
+if (colInput) colInput.addEventListener('input', function () {
 tw.color[posKey] = this.value; save(); applyColor();
 });
-document.getElementById('tw-color-reset').addEventListener('click', function () {
+if (colReset) colReset.addEventListener('click', function () {
 delete tw.color[posKey]; save(); applyColor(); syncPos();
 });
 /* Перетаскивание текста прямо на странице, пока открыта панель. Клик по ссылке после сдвига не срабатывает. */
