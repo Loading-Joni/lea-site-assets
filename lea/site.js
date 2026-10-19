@@ -91,6 +91,26 @@ o.vis = px > 16 && px < W - 16 && py > 16 && py < H - 16;
 });
 }
 
+/* Закрепление сцены считаем сами: position:sticky ломается, если у родителей Tilda есть overflow или transform. */
+var pinMode = '';
+function pin(rr) {
+var mode = rr.top > 0 ? 'top' : (rr.bottom > stage.offsetHeight ? 'fixed' : 'bottom');
+if (mode === 'fixed') {
+stage.style.position = 'fixed';
+stage.style.top = '0px';
+stage.style.bottom = 'auto';
+stage.style.left = rr.left + 'px';
+stage.style.width = rr.width + 'px';
+} else if (mode !== pinMode) {
+stage.style.position = 'absolute';
+stage.style.left = '0px';
+stage.style.width = '100%';
+stage.style.top = mode === 'top' ? '0px' : 'auto';
+stage.style.bottom = mode === 'bottom' ? '0px' : 'auto';
+}
+pinMode = mode;
+}
+
 function progress() {
 var rr = hero.getBoundingClientRect();
 var total = hero.offsetHeight - stage.offsetHeight;
@@ -146,6 +166,7 @@ o.line.style.opacity = String(pa);
 /* Сглаживание прогресса по времени кадра: не зависит от частоты экрана, убирает рывки от колеса мыши и тачпада. */
 var SMOOTH = 3, smP = 0, lastFrame = 0;
 function render(now) {
+pin(hero.getBoundingClientRect());
 var target = progress();
 if (!lastFrame) smP = target;
 var dt = lastFrame ? Math.min(.1, (now - lastFrame) / 1000) : 0;
