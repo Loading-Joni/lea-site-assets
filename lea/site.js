@@ -52,6 +52,14 @@ function markReady() { if (video.readyState >= 2) video.classList.add('is-ready'
 video.addEventListener('loadeddata', markReady);
 markReady();
 
+/* На портрете за полосой видео — размытая копия того же кадра. Маленький canvas, CSS растягивает и размывает. */
+var bgc = document.createElement('canvas');
+bgc.className = 'v2-bgc';
+bgc.width = 192; bgc.height = 108;
+bgc.setAttribute('aria-hidden', 'true');
+stage.insertBefore(bgc, stage.firstChild);
+var bgx = bgc.getContext('2d');
+
 /* Выноски и точки стоят в разметке (#v2-pin1…4, #v2-note1…4); JS только ведёт их по кадру и рисует линии. */
 var spots = HOTSPOTS.map(function (s, i) {
 var line = document.createElementNS(NS, 'line');
@@ -95,6 +103,7 @@ var portrait = W < H;
 if (portrait !== fitPortrait) {
 fitPortrait = portrait;
 svg.setAttribute('preserveAspectRatio', portrait ? 'xMidYMid meet' : 'xMidYMid slice');
+stage.classList.toggle('v2-portrait', portrait);
 }
 /* На портрете кадр вписан по ширине целиком: без зума, панорамы и обрезки. Выноски остаются на деталях. */
 if (portrait) return {s: 1, cx: 800, cy: 450};
@@ -122,6 +131,7 @@ if (!video.seeking && Math.abs(target - video.currentTime) > 0.02) video.current
 function draw(p) {
 var c = camera(p);
 world.setAttribute('transform', 'translate(800 450) scale(' + c.s + ') translate(' + (-c.cx) + ' ' + (-c.cy) + ')');
+if (fitPortrait && video.readyState >= 2) bgx.drawImage(video, 0, 0, bgc.width, bgc.height);
 intro.style.opacity = String(1 - clamp((p - .04) / .1, 0, 1));
 intro.style.transform = 'translateY(' + (clamp(p / .1, 0, 1) * -24) + 'px)';
 scrub(p);
