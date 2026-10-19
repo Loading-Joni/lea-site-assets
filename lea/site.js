@@ -565,33 +565,6 @@ document.getElementById('v2-exp-close').addEventListener('click', function () { 
 syncUi();
 applyTw();
 
-var flameBox = document.getElementById('v2-flame');
-var flameGlow = flameBox.querySelector('.v2-flame-glow');
-var flameHot = flameBox.querySelector('.v2-flame-hot');
-var flameI = flameHot.querySelector('i'), flameB = flameHot.querySelector('b');
-var fl = {w: 0, mx: null, on: false, op: 0};
-function flameMeasure() { fl.w = flameBox.getBoundingClientRect().width; }
-flameMeasure();
-window.addEventListener('resize', flameMeasure);
-flameBox.addEventListener('mouseenter', function () { fl.on = true; });
-flameBox.addEventListener('mouseleave', function () { fl.on = false; fl.mx = null; });
-flameBox.addEventListener('mousemove', function (e) { fl.mx = e.clientX - flameBox.getBoundingClientRect().left; });
-function flameFrame() {
-var mx = fl.mx == null ? fl.w / 2 : fl.mx;
-var nx = fl.w ? mx / fl.w : .5;
-var prox = Math.pow(Math.min(1, Math.abs(nx - .5) * 2), 1.6);
-var target = fl.on ? prox : 0;
-var d = target - fl.op;
-fl.op = Math.abs(d) < .002 ? target : fl.op + d * .15;
-flameGlow.style.opacity = String(fl.op);
-flameGlow.style.background = 'radial-gradient(ellipse 44% 85% at ' + (nx >= .5 ? 88 : 12) + '% 50%, rgba(255,214,130,1) 0%, rgba(255,106,45,.95) 28%, rgba(255,45,85,.5) 50%, rgba(255,45,85,.12) 68%, transparent 80%)';
-flameHot.style.opacity = fl.on ? '1' : '0';
-flameI.style.left = mx + 'px';
-flameB.style.left = mx + 'px';
-requestAnimationFrame(flameFrame);
-}
-requestAnimationFrame(flameFrame);
-
 /* Голографическая стена: сетка 20×20 иероглифов, у курсора они светятся золотом (порт holographic-wall). */
 var HOLO_CHARS = ['𓄿','𓇋','𓅱','𓃀','𓊪','𓆑','𓅓','𓈖','𓂋','𓉔','𓎛','𓐍','𓄡','𓋴','𓈙','𓈎','𓎡','𓎼','𓏏','𓂧'];
 var HOLO_N = 20, HOLO_R = 200, HOLO_I = 0.8;
