@@ -34,14 +34,6 @@ var CAM = [
 {p:.62, cx:1150, cy:440, s:1.3},
 {p:1, cx:1280, cy:300, s:1.6}
 ];
-/* Для портрета: по X кадр ведёт к активной выноске, чтобы её точка оставалась в кадре. */
-var CAM_P = [
-{p:0, cx:560, s:1},
-{p:.3, cx:560, s:1},
-{p:.62, cx:900, s:1},
-{p:.85, cx:1100, s:1},
-{p:1, cx:1200, s:1}
-];
 var RATES = {cosmetic:3500, capital:7500, design:12000, newbuild:6000};
 var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 var NS = 'http://www.w3.org/2000/svg';
@@ -96,23 +88,24 @@ return clamp(-rr.top / total, 0, 1);
 }
 
 /* Камера: между ключевыми кадрами плавный переход, центр не выходит за пределы кадра hero3. */
+var fitPortrait = null;
 function camera(p) {
 var W = stage.clientWidth, H = stage.clientHeight;
 var portrait = W < H;
-var K = portrait ? CAM_P : CAM;
+if (portrait !== fitPortrait) {
+fitPortrait = portrait;
+svg.setAttribute('preserveAspectRatio', portrait ? 'xMidYMid meet' : 'xMidYMid slice');
+}
+/* На портрете кадр вписан по ширине целиком: без зума, панорамы и обрезки. Выноски остаются на деталях. */
+if (portrait) return {s: 1, cx: 800, cy: 450};
 var i = 0;
-while (i < K.length - 2 && p > K[i + 1].p) i++;
-var a = K[i], b = K[i + 1];
+while (i < CAM.length - 2 && p > CAM[i + 1].p) i++;
+var a = CAM[i], b = CAM[i + 1];
 var t = clamp((p - a.p) / (b.p - a.p), 0, 1);
 t = t * t * (3 - 2 * t);
 var s = 1 + ((a.s + (b.s - a.s) * t) - 1) * zoomK;
 var cx = a.cx + (b.cx - a.cx) * t;
 var cy = a.cy + (b.cy - a.cy) * t;
-/* На портрете кадр всегда виден по высоте целиком (без зума и вертикального сдвига), режется только ширина по сторонам. */
-if (portrait) {
-var half = 450 * W / H;
-return {s: 1, cx: clamp(cx, half, 1600 - half), cy: 450};
-}
 var hw = 800 / s, hh = 450 / s;
 return {s: s, cx: clamp(cx, hw, 1600 - hw), cy: clamp(cy, hh, 900 - hh)};
 }
