@@ -30,6 +30,9 @@
 .v2-scene video{display:block;width:100%;height:100%;object-fit:cover;filter:brightness(var(--bright,1));opacity:0;transition:opacity .6s}
 .v2-scene video.is-ready{opacity:1}
 .v2-novideo #v2-vidbox{display:none}
+.v2-bgc{display:none;position:absolute;left:-60px;top:-60px;width:calc(100% + 120px);height:calc(100% + 120px);object-fit:cover;filter:blur(24px) brightness(.45) saturate(.9);pointer-events:none;z-index:0}
+.v2-stage.v2-portrait .v2-bgc{display:block}
+.v2-stage.v2-portrait .v2-scene{z-index:1}
 .v2-shade{position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(90deg,rgba(14,15,16,.9) 0%,rgba(14,15,16,.35) 55%,rgba(14,15,16,.05) 100%);opacity:var(--shade,.8)}
 .v2-hl{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .v2-hl line{stroke:var(--lamp);stroke-width:1;stroke-dasharray:1;stroke-dashoffset:1}
