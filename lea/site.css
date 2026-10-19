@@ -20,13 +20,8 @@
 .v2-btn--line{background:transparent;color:var(--paper);box-shadow:inset 0 0 0 1px var(--line2)}
 .v2-btn--line:hover{background:transparent;color:var(--lamp);box-shadow:inset 0 0 0 1px var(--lamp)}
 .v2-flame-wrap{position:relative;display:inline-flex;isolation:isolate;user-select:none}
-.v2-flame-glow{position:absolute;inset:-6px;border-radius:9999px;pointer-events:none;z-index:0;filter:blur(7px) saturate(1.4);opacity:0}
 .v2-flame{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:10px;height:56px;padding:0 32px;border:0;border-radius:9999px;overflow:hidden;background:var(--btn-bg);color:var(--btn-fg);font:700 13px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;text-decoration:none;cursor:pointer;outline:none;-webkit-tap-highlight-color:transparent;transition:background .5s var(--ease)}
 .v2-flame svg{flex:none}
-.v2-flame-hot{position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:0;transition:opacity .15s ease-out}
-.v2-flame-hot i,.v2-flame-hot b{position:absolute;top:50%;border-radius:50%;transform:translate(-50%,-50%)}
-.v2-flame-hot i{width:121px;height:121px;background:radial-gradient(50% 50% at 50% 50%,#FFFFF5 3.5%,rgba(255,106,45,1) 26.5%,#FFDA9F 37.5%,rgba(255,106,45,.5) 49%,rgba(255,45,85,0) 92.5%)}
-.v2-flame-hot b{width:204px;height:103px;filter:blur(5px);background:radial-gradient(43.3% 44.23% at 50% 49.51%,#FFFFF7 29%,#FFFACD 48.5%,#F4D2BF 60.71%,rgba(214,211,210,0) 100%)}
 .v2-hero{height:280vh;position:relative}
 .v2-stage{position:sticky;top:0;height:100vh;overflow:hidden;background:radial-gradient(120% 90% at 50% 40%,#22262A 0%,#0E0F10 70%)}
 .v2-word{position:absolute;left:0;right:0;top:50%;transform:translateY(-58%);text-align:center;font:700 clamp(9rem,30vw,30rem)/.8 var(--serif);letter-spacing:-.04em;color:transparent;-webkit-text-stroke:1px rgba(237,232,224,.16);white-space:nowrap;pointer-events:none;user-select:none}
