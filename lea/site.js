@@ -42,7 +42,6 @@ function fmt(n) { return n.toLocaleString('ru-RU'); }
 
 var hero = document.querySelector('.v2-hero');
 var stage = document.getElementById('v2-stage');
-var svg = document.getElementById('v2-scene');
 var world = document.getElementById('v2-world');
 var hl = document.getElementById('v2-hl');
 var intro = document.getElementById('v2-intro');
@@ -68,17 +67,15 @@ return {s: s, pin: document.getElementById('v2-pin' + (i + 1)), note: document.g
 });
 
 var zoomK = 1.15;
+/* Преобразование кадра hero3 (1600×900) в координаты стейджа: экран = X + A·x. Обновляет draw(). */
+var view = {X: 0, Y: 0, A: 1};
 function place() {
-var r = stage.getBoundingClientRect();
-var W = r.width, H = r.height;
+var W = stage.clientWidth, H = stage.clientHeight;
 hl.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-var m = world.getScreenCTM();
 /* На портрете кадр 16:9 стоит полосой по центру: карточки выносятся в один слот под полосой, точки остаются на деталях. */
 var bandBottom = (H + W * 9 / 16) / 2;
 spots.forEach(function (o) {
-var pt = svg.createSVGPoint(); pt.x = o.s.ax; pt.y = o.s.ay;
-var q = pt.matrixTransform(m);
-var px = q.x - r.left, py = q.y - r.top;
+var px = view.X + view.A * o.s.ax, py = view.Y + view.A * o.s.ay;
 var nw = o.note.offsetWidth, nh = o.note.offsetHeight;
 var nx, ny, ex, ey;
 if (fitPortrait) {
@@ -109,13 +106,7 @@ return clamp(-rr.top / total, 0, 1);
 /* Камера: между ключевыми кадрами плавный переход, центр не выходит за пределы кадра hero3. */
 var fitPortrait = null;
 function camera(p) {
-var W = stage.clientWidth, H = stage.clientHeight;
-var portrait = W < H;
-if (portrait !== fitPortrait) {
-fitPortrait = portrait;
-svg.setAttribute('preserveAspectRatio', portrait ? 'xMidYMid meet' : 'xMidYMid slice');
-stage.classList.toggle('v2-portrait', portrait);
-}
+var portrait = stage.clientWidth < stage.clientHeight;
 /* На портрете кадр вписан по ширине целиком: без зума, панорамы и обрезки. Выноски остаются на деталях. */
 if (portrait) return {s: 1, cx: 800, cy: 450};
 var i = 0;
@@ -140,9 +131,20 @@ if (!video.seeking && Math.abs(target - video.currentTime) > 0.02) video.current
 }
 
 function draw(p) {
+var W = stage.clientWidth, H = stage.clientHeight;
+var portrait = W < H;
+if (portrait !== fitPortrait) {
+fitPortrait = portrait;
+stage.classList.toggle('v2-portrait', portrait);
+}
 var c = camera(p);
-world.setAttribute('transform', 'translate(800 450) scale(' + c.s + ') translate(' + (-c.cx) + ' ' + (-c.cy) + ')');
-if (fitPortrait && video.readyState >= 2) bgx.drawImage(video, 0, 0, bgc.width, bgc.height);
+/* Кадр 1600×900 вписан в стейдж: на телефоне целиком полосой по центру, на широком экране — с обрезкой по краям. */
+var k = portrait ? Math.min(W / 1600, H / 900) : Math.max(W / 1600, H / 900);
+view.A = k * c.s;
+view.X = (W - 1600 * k) / 2 + 800 * k - view.A * c.cx;
+view.Y = (H - 900 * k) / 2 + 450 * k - view.A * c.cy;
+world.style.transform = 'translate(' + view.X + 'px,' + view.Y + 'px) scale(' + view.A + ')';
+if (portrait && video.readyState >= 2) bgx.drawImage(video, 0, 0, bgc.width, bgc.height);
 intro.style.opacity = String(1 - clamp((p - .04) / .1, 0, 1));
 intro.style.transform = 'translateY(' + (clamp(p / .1, 0, 1) * -24) + 'px)';
 scrub(p);
@@ -308,7 +310,7 @@ if (!m || m.length < 3) return '#ffffff';
 return '#' + m.slice(0, 3).map(function (v) { return ('0' + (+v).toString(16)).slice(-2); }).join('');
 }
 function applyTw() {
-photo.setAttribute('href', asset('hero/' + tw.hero));
+photo.setAttribute('src', asset('hero/' + tw.hero));
 twRoot.classList.toggle('v2-novideo', !(tw.video && tw.hero === 'hero3.jpg'));
 twRoot.style.setProperty('--bright', (tw.bright / 100).toFixed(2));
 twRoot.style.setProperty('--shade', (tw.shade / 100).toFixed(2));
@@ -595,7 +597,7 @@ c.querySelectorAll('.v2-holo, #v2-hl line').forEach(function (n) { n.parentNode.
 c.querySelectorAll('.is-in, .is-ready').forEach(function (n) { n.classList.remove('is-in', 'is-ready'); });
 c.querySelectorAll('[contenteditable]').forEach(function (n) { n.removeAttribute('contenteditable'); });
 c.querySelectorAll('.v2-pin, .v2-note, #v2-intro, .v2-flame-glow, .v2-flame-hot, .v2-flame-hot i, .v2-flame-hot b').forEach(function (n) { n.removeAttribute('style'); });
-c.querySelectorAll('#v2-world').forEach(function (n) { n.removeAttribute('transform'); });
+c.querySelectorAll('#v2-world').forEach(function (n) { n.removeAttribute('style'); });
 c.querySelectorAll('.v2-modal').forEach(function (n) { n.hidden = true; });
 c.querySelectorAll('#v2-exp-list').forEach(function (n) { n.innerHTML = ''; });
 c.querySelectorAll('#v2-tw').forEach(function (n) { n.classList.remove('is-open'); });
@@ -741,7 +743,7 @@ requestAnimationFrame(render);
 }
 
 /* Блоки Tilda могут появиться не все сразу, поэтому ждём нужные элементы и запускаем один раз. */
-var NEED = ['v2-scene', 'v2-video', 'v2-photo', 'v2-flame', 'v2-area', 'v2-form', 'v2-tw', 'v2-tw-btn', 'v2-login', 'v2-exp', 'etapy'];
+var NEED = ['v2-world', 'v2-video', 'v2-photo', 'v2-flame', 'v2-area', 'v2-form', 'v2-tw', 'v2-tw-btn', 'v2-login', 'v2-exp', 'etapy'];
 var tries = 0;
 (function waitForBlocks() {
 var ready = NEED.every(function (id) { return document.getElementById(id); });
