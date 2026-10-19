@@ -218,6 +218,7 @@
 .v2-faq{grid-template-columns:1fr}
 .v2-fields{grid-template-columns:1fr}
 .v2-serv li{grid-template-columns:1fr;gap:6px}
+.v2 :is(.v2-kicker,.v2-h1,.v2-sub,.v2-ctas,.v2-lede,.v2-serv,.v2-steps,.v2-why,.v2-calc-grid,.v2-quotes,.v2-faq,#zayavka){translate:none!important}
 }
 @media (max-width:600px){
 .v2-ctas{flex-direction:column;align-items:stretch;max-width:340px;margin:0 auto}
