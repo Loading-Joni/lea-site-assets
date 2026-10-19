@@ -501,6 +501,10 @@ c.querySelectorAll('.is-in, .is-ready').forEach(function (n) { n.classList.remov
 c.querySelectorAll('[contenteditable]').forEach(function (n) { n.removeAttribute('contenteditable'); });
 c.querySelectorAll('.v2-pin, .v2-note, #v2-intro, .v2-flame-glow, .v2-flame-hot, .v2-flame-hot i, .v2-flame-hot b').forEach(function (n) { n.removeAttribute('style'); });
 c.querySelectorAll('#v2-world').forEach(function (n) { n.removeAttribute('transform'); });
+c.querySelectorAll('.v2-modal').forEach(function (n) { n.hidden = true; });
+c.querySelectorAll('#v2-exp-list').forEach(function (n) { n.innerHTML = ''; });
+c.querySelectorAll('#v2-tw').forEach(function (n) { n.classList.remove('is-open'); });
+c.querySelectorAll('#v2-tw-btn').forEach(function (n) { n.setAttribute('aria-expanded', 'false'); });
 c.querySelectorAll('[style]').forEach(function (n) {
 n.style.removeProperty('translate');
 n.style.removeProperty('--p');
@@ -548,15 +552,37 @@ head.appendChild(t); head.appendChild(s); head.appendChild(copy);
 wrap.appendChild(head); wrap.appendChild(ta);
 return wrap;
 }
+/* Загрузчик такой же, как в блоке 12: подключает site.css и site.js с ASSET_BASE. */
+function loaderCode() {
+return [
+'<script>',
+'(function () {',
+'if (window.__leaLoader) return;',
+'window.__leaLoader = true;',
+'var base = \'' + ASSET_BASE + '\';',
+'var css = document.createElement(\'link\');',
+'css.rel = \'stylesheet\';',
+'css.href = base + \'site.css\';',
+'document.head.appendChild(css);',
+'var js = document.createElement(\'script\');',
+'js.src = base + \'site.js\';',
+'js.async = false;',
+'document.body.appendChild(js);',
+'})();',
+'</script>'
+].join('\n');
+}
+/* Весь сайт (настройки, 11 секций и админка) одним куском для одного T123-блока. */
 function exportBlocks() {
 var list = document.getElementById('v2-exp-list');
 list.innerHTML = '';
-var items = [{title: 'Настройки — вставить первым', html: '<script>window.LEA_TW = ' + JSON.stringify(tw) + ';</script>'}];
-EXPORT_ORDER.forEach(function (name) {
+var parts = ['<!-- ЛЕА: весь сайт одним кодом, вставить в один T123 HTML-блок -->', '<script>window.LEA_TW = ' + JSON.stringify(tw) + ';</script>'];
+EXPORT_ORDER.concat(['admin']).forEach(function (name) {
 var root = document.querySelector('.v2[data-block="' + name + '"]');
-if (root) items.push({title: 'Блок «' + name + '»', html: cleanBlock(root)});
+if (root) parts.push(cleanBlock(root));
 });
-items.forEach(function (it) { list.appendChild(exportItem(it)); });
+parts.push(loaderCode());
+list.appendChild(exportItem({title: 'Весь сайт одним кодом', html: parts.join('\n')}));
 expBox.hidden = false;
 }
 document.getElementById('tw-export').addEventListener('click', exportBlocks);
