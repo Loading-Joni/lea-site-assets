@@ -60,9 +60,13 @@ return {s: s, pin: document.getElementById('v2-pin' + (i + 1)), note: document.g
 });
 
 var zoomK = 1.15;
+var lastPortrait = null;
 function place() {
 var r = stage.getBoundingClientRect();
 var W = r.width, H = r.height;
+/* На портрете кадр целиком (meet), поля закрывает размытый фон из CSS. */
+var portrait = W < H;
+if (portrait !== lastPortrait) { svg.setAttribute('preserveAspectRatio', portrait ? 'xMidYMid meet' : 'xMidYMid slice'); lastPortrait = portrait; }
 hl.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
 var m = world.getScreenCTM();
 spots.forEach(function (o) {
@@ -70,9 +74,10 @@ var pt = svg.createSVGPoint(); pt.x = o.s.ax; pt.y = o.s.ay;
 var q = pt.matrixTransform(m);
 var px = q.x - r.left, py = q.y - r.top;
 var nx = o.s.bx / 100 * W + (tw.pos[o.key] || [0, 0])[0], ny = o.s.by / 100 * H + (tw.pos[o.key] || [0, 0])[1];
+var nw = o.note.offsetWidth, nh = o.note.offsetHeight;
+nx = clamp(nx, 12, Math.max(12, W - nw - 12)); ny = clamp(ny, 12, Math.max(12, H - nh - 12));
 o.pin.style.left = px + 'px'; o.pin.style.top = py + 'px';
 o.note.style.left = nx + 'px'; o.note.style.top = ny + 'px';
-var nw = o.note.offsetWidth;
 var ex = nx > px ? nx : nx + nw;
 o.line.setAttribute('x1', px); o.line.setAttribute('y1', py);
 o.line.setAttribute('x2', ex); o.line.setAttribute('y2', ny + 12);
