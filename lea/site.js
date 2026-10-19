@@ -63,14 +63,6 @@ function markReady() { if (video.readyState >= 2) video.classList.add('is-ready'
 video.addEventListener('loadeddata', markReady);
 markReady();
 
-/* На портрете за полосой видео — размытая копия того же кадра. Маленький canvas, CSS растягивает и размывает. */
-var bgc = document.createElement('canvas');
-bgc.className = 'v2-bgc';
-bgc.width = 192; bgc.height = 108;
-bgc.setAttribute('aria-hidden', 'true');
-stage.insertBefore(bgc, stage.firstChild);
-var bgx = bgc.getContext('2d');
-
 /* Выноски и точки стоят в разметке (#v2-pin1…4, #v2-note1…4); JS только ведёт их по кадру и рисует линии. */
 var spots = HOTSPOTS.map(function (s, i) {
 var line = document.createElementNS(NS, 'line');
@@ -84,23 +76,13 @@ var view = {X: 0, Y: 0, A: 1};
 function place() {
 var W = stage.clientWidth, H = stage.clientHeight;
 hl.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-/* На портрете кадр 16:9 стоит полосой по центру: карточки выносятся в один слот под полосой, точки остаются на деталях. */
-var bandBottom = (H + W * 9 / 16) / 2;
 spots.forEach(function (o) {
 var px = view.X + view.A * o.s.ax, py = view.Y + view.A * o.s.ay;
 var nw = o.note.offsetWidth, nh = o.note.offsetHeight;
-var nx, ny, ex, ey;
-if (fitPortrait) {
-nx = (W - nw) / 2;
-ny = bandBottom + 16;
-nx = clamp(nx, 12, Math.max(12, W - nw - 12)); ny = clamp(ny, 12, Math.max(12, H - nh - 12));
-ex = clamp(px, nx + 8, nx + nw - 8); ey = ny;
-} else {
 var off = tw.pos[o.key] || [0, 0];
-nx = clamp(o.s.bx / 100 * W + off[0], 12, Math.max(12, W - nw - 12));
-ny = clamp(o.s.by / 100 * H + off[1], 12, Math.max(12, H - nh - 12));
-ex = nx > px ? nx : nx + nw; ey = ny + 12;
-}
+var nx = clamp(o.s.bx / 100 * W + off[0], 12, Math.max(12, W - nw - 12));
+var ny = clamp(o.s.by / 100 * H + off[1], 12, Math.max(12, H - nh - 12));
+var ex = nx > px ? nx : nx + nw, ey = ny + 12;
 o.pin.style.left = px + 'px'; o.pin.style.top = py + 'px';
 o.note.style.left = nx + 'px'; o.note.style.top = ny + 'px';
 o.line.setAttribute('x1', px); o.line.setAttribute('y1', py);
@@ -115,19 +97,8 @@ var total = hero.offsetHeight - stage.offsetHeight;
 return clamp(-rr.top / total, 0, 1);
 }
 
-/* Закрепление сцены через transform, а не position:sticky: sticky ломается в Tilda и на iOS из-за overflow у предков. */
-function pinStage() {
-var room = hero.offsetHeight - stage.offsetHeight;
-var y = clamp(-hero.getBoundingClientRect().top, 0, room);
-stage.style.transform = 'translate3d(0,' + y + 'px,0)';
-}
-
 /* Камера: между ключевыми кадрами плавный переход, центр не выходит за пределы кадра hero3. */
-var fitPortrait = null;
 function camera(p) {
-var portrait = stage.clientWidth < stage.clientHeight;
-/* На портрете кадр вписан по ширине целиком: без зума, панорамы и обрезки. Выноски остаются на деталях. */
-if (portrait) return {s: 1, cx: 800, cy: 450};
 var i = 0;
 while (i < CAM.length - 2 && p > CAM[i + 1].p) i++;
 var a = CAM[i], b = CAM[i + 1];
@@ -149,21 +120,15 @@ var target = p * Math.max(0, d - 0.04);
 if (!video.seeking && Math.abs(target - video.currentTime) > 0.02) video.currentTime = target;
 }
 
+/* Кадр 1600×900 заполняет весь экран (cover): без полос и размытия. */
 function draw(p) {
 var W = stage.clientWidth, H = stage.clientHeight;
-var portrait = W < H;
-if (portrait !== fitPortrait) {
-fitPortrait = portrait;
-stage.classList.toggle('v2-portrait', portrait);
-}
 var c = camera(p);
-/* Кадр 1600×900 вписан в стейдж: на телефоне целиком полосой по центру, на широком экране — с обрезкой по краям. */
-var k = portrait ? Math.min(W / 1600, H / 900) : Math.max(W / 1600, H / 900);
+var k = Math.max(W / 1600, H / 900);
 view.A = k * c.s;
 view.X = (W - 1600 * k) / 2 + 800 * k - view.A * c.cx;
 view.Y = (H - 900 * k) / 2 + 450 * k - view.A * c.cy;
 world.style.transform = 'translate(' + view.X + 'px,' + view.Y + 'px) scale(' + view.A + ')';
-if (portrait && video.readyState >= 2) bgx.drawImage(video, 0, 0, bgc.width, bgc.height);
 intro.style.opacity = String(1 - clamp((p - .04) / .1, 0, 1));
 intro.style.transform = 'translateY(' + (clamp(p / .1, 0, 1) * -24) + 'px)';
 scrub(p);
@@ -181,7 +146,6 @@ o.line.style.opacity = String(pa);
 /* Сглаживание прогресса по времени кадра: не зависит от частоты экрана, убирает рывки от колеса мыши и тачпада. */
 var SMOOTH = 3, smP = 0, lastFrame = 0;
 function render(now) {
-pinStage();
 var target = progress();
 if (!lastFrame) smP = target;
 var dt = lastFrame ? Math.min(.1, (now - lastFrame) / 1000) : 0;
