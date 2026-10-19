@@ -122,10 +122,12 @@ intro.style.transform = 'translateY(' + (clamp(p / .1, 0, 1) * -24) + 'px)';
 scrub(p);
 place();
 spots.forEach(function (o) {
-var a = (p < o.s.from || p > o.s.to || !o.vis) ? 0 : Math.min(1, (p - o.s.from) / .06, o.s.to >= 1 ? 1 : (o.s.to - p) / .06);
-o.pin.style.opacity = String(a);
+var a = (p < o.s.from || p > o.s.to) ? 0 : Math.min(1, (p - o.s.from) / .06, o.s.to >= 1 ? 1 : (o.s.to - p) / .06);
+/* Карточка остаётся в окне прогресса, даже если точка ушла за кадр; пин и линия скрываются. */
+var pa = o.vis ? a : 0;
+o.pin.style.opacity = String(pa);
 o.note.style.opacity = String(a);
-o.line.style.opacity = String(a);
+o.line.style.opacity = String(pa);
 });
 }
 
@@ -185,7 +187,7 @@ submit.disabled = true;
 document.getElementById('v2-year').textContent = new Date().getFullYear();
 
 var TW_KEY = 'lea-v2-tw';
-var TW_DEF = {hero:'hero3.jpg', video:true, bright:100, shade:80, zoom:115, fs:100, img:100, gap:100, bg:'graphite', anim:true, font:0, btn:0, pos:{}};
+var TW_DEF = {hero:'hero3.jpg', video:true, bright:100, shade:80, zoom:115, fs:100, img:100, gap:100, bg:'graphite', anim:true, font:0, btn:0, pos:{}, color:{}};
 /* Первый образец — исходная пара шрифтов сайта. --serif для заголовков, --sans для текста. */
 var FONTS = [
 {n:'Журнал', d:'Playfair / Manrope', serif:"'Playfair Display',Georgia,serif", sans:"'Manrope',system-ui,sans-serif"},
@@ -234,6 +236,8 @@ var saved = null;
 try { saved = JSON.parse(localStorage.getItem(TW_KEY)); } catch (e) { saved = null; }
 var fromCfg = saved || window.LEA_TW || {};
 for (var key in fromCfg) tw[key] = fromCfg[key];
+tw.pos = tw.pos || {};
+tw.color = tw.color || {};
 var RANGES = {bright:'tw-bright', shade:'tw-shade', zoom:'tw-zoom', fs:'tw-fs', img:'tw-img', gap:'tw-gap'};
 /* Твики применяются ко всем блокам сразу: twRoot работает как набор всех блоков с data-block. */
 var allRoots = Array.prototype.slice.call(document.querySelectorAll('.v2[data-block]'));
@@ -273,6 +277,30 @@ var p = tw.pos[x.k] || [0, 0];
 el.style.translate = p[0] + 'px ' + p[1] + 'px';
 });
 }
+/* Элемент, которым управляет ключ: текстовый блок или выноска note1–note4. */
+function elFor(k) {
+if (k.indexOf('note') === 0) { var n = spots[+k.slice(4) - 1]; return n ? n.note : null; }
+for (var i = 0; i < TEXTS.length; i++) if (TEXTS[i].k === k) return document.querySelector(TEXTS[i].s);
+return null;
+}
+function applyColor() {
+document.querySelectorAll('[data-tc]').forEach(function (n) { n.removeAttribute('data-tc'); });
+var css = '';
+Object.keys(tw.color).forEach(function (k) {
+var el = elFor(k);
+if (!el) return;
+el.setAttribute('data-tc', k);
+css += '[data-tc="' + k + '"], [data-tc="' + k + '"] * {color:' + tw.color[k] + ' !important}\n';
+});
+var st = document.getElementById('tw-color-style');
+if (!st) { st = document.createElement('style'); st.id = 'tw-color-style'; document.head.appendChild(st); }
+st.textContent = css;
+}
+function toHex(c) {
+var m = String(c).match(/\d+/g);
+if (!m || m.length < 3) return '#ffffff';
+return '#' + m.slice(0, 3).map(function (v) { return ('0' + (+v).toString(16)).slice(-2); }).join('');
+}
 function applyTw() {
 photo.setAttribute('href', asset('hero/' + tw.hero));
 twRoot.classList.toggle('v2-novideo', !(tw.video && tw.hero === 'hero3.jpg'));
@@ -285,7 +313,7 @@ twRoot.classList.toggle('v2-still', !tw.anim);
 etapy.setAttribute('data-bg', tw.bg);
 applyFont();
 applyPos();
-zoomK = tw.zoom / 100;
+applyColor();
 var bt = BTNS[tw.btn] || BTNS[0];
 twRoot.style.setProperty('--btn-bg', bt.bg);
 twRoot.style.setProperty('--btn-hv', bt.hv);
@@ -335,7 +363,7 @@ inp.addEventListener('change', function () { tw.btn = i; save(); applyTw(); });
 });
 
 var posSel = document.getElementById('tw-pos-sel');
-var PAD = {x: 900, y: 600};
+var PAD = {x: 1400, y: 1000};
 var pad = document.getElementById('tw-pad'), dot = document.getElementById('tw-dot');
 var posOpts = TEXTS.map(function (x) { return {k: x.k, t: x.t}; })
 .concat(HOTSPOTS.map(function (h, i) { return {k: 'note' + (i + 1), t: 'Выноска ' + (i + 1) + ': ' + h.title}; }));
@@ -348,6 +376,8 @@ posSel.value = posKey;
 dot.style.left = ((p[0] + PAD.x) / (2 * PAD.x) * 100) + '%';
 dot.style.top = ((p[1] + PAD.y) / (2 * PAD.y) * 100) + '%';
 document.getElementById('o-xy').textContent = 'X ' + p[0] + ' · Y ' + p[1] + ' px';
+var colEl = elFor(posKey);
+document.getElementById('tw-color').value = tw.color[posKey] || (colEl ? toHex(getComputedStyle(colEl).color) : '#ffffff');
 }
 posSel.addEventListener('change', function () { posKey = this.value; syncPos(); });
 function setPos(x, y) {
@@ -363,6 +393,12 @@ pad.addEventListener('pointerdown', function (e) { pad.setPointerCapture(e.point
 pad.addEventListener('pointermove', function (e) { if (pad.hasPointerCapture(e.pointerId)) padSet(e); });
 document.getElementById('tw-pos-reset').addEventListener('click', function () {
 delete tw.pos[posKey]; save(); syncPos(); applyPos();
+});
+document.getElementById('tw-color').addEventListener('input', function () {
+tw.color[posKey] = this.value; save(); applyColor();
+});
+document.getElementById('tw-color-reset').addEventListener('click', function () {
+delete tw.color[posKey]; save(); applyColor(); syncPos();
 });
 /* Перетаскивание текста прямо на странице, пока открыта панель. Клик по ссылке после сдвига не срабатывает. */
 function keyAt(target) {
@@ -504,6 +540,7 @@ c.classList.remove('v2-novideo', 'v2-still', 'v2-editing', 'v2-txt');
 c.querySelectorAll('.v2-holo, #v2-hl line').forEach(function (n) { n.parentNode.removeChild(n); });
 c.querySelectorAll('.is-in, .is-ready').forEach(function (n) { n.classList.remove('is-in', 'is-ready'); });
 c.querySelectorAll('[contenteditable]').forEach(function (n) { n.removeAttribute('contenteditable'); });
+c.querySelectorAll('[data-tc]').forEach(function (n) { n.removeAttribute('data-tc'); });
 c.querySelectorAll('.v2-pin, .v2-note, #v2-intro, .v2-flame-glow, .v2-flame-hot, .v2-flame-hot i, .v2-flame-hot b').forEach(function (n) { n.removeAttribute('style'); });
 c.querySelectorAll('#v2-world').forEach(function (n) { n.removeAttribute('transform'); });
 c.querySelectorAll('.v2-modal').forEach(function (n) { n.hidden = true; });
@@ -609,8 +646,6 @@ c.el.style.left = c.x + 'px'; c.el.style.top = c.y + 'px';
 }
 function holoPaint(h) {
 var on = h.mx !== null;
-if (on) { h.halo.style.left = h.mx + 'px'; h.halo.style.top = h.my + 'px'; }
-h.halo.style.opacity = on ? String(HOLO_I) : '0';
 h.cells.forEach(function (c) {
 var d = on ? Math.hypot(c.x - h.mx, c.y - h.my) : Infinity;
 if (d < HOLO_R) {
@@ -623,11 +658,10 @@ c.el.style.color = ''; c.el.style.transform = ''; c.el.style.textShadow = '';
 }
 });
 }
-document.querySelectorAll('.v2-holo-host').forEach(function (host) {
+/* Подложка на всех секциях, кроме hero с видео: символы подсвечиваются под курсором, без свечения. */
+document.querySelectorAll('.v2-sec').forEach(function (host) {
 var layer = document.createElement('div');
 layer.className = 'v2-holo'; layer.setAttribute('aria-hidden', 'true');
-var halo = document.createElement('i'); halo.className = 'v2-holo-halo';
-layer.appendChild(halo);
 var cells = [];
 for (var i = 0; i < HOLO_N; i++) for (var j = 0; j < HOLO_N; j++) {
 var s = document.createElement('span');
@@ -636,7 +670,7 @@ layer.appendChild(s);
 cells.push({el: s, i: i, j: j, x: 0, y: 0});
 }
 host.insertBefore(layer, host.firstChild);
-var h = {layer: layer, halo: halo, cells: cells, mx: null, my: null};
+var h = {layer: layer, cells: cells, mx: null, my: null};
 holos.push(h);
 host.addEventListener('mousemove', function (e) {
 var r = layer.getBoundingClientRect();
